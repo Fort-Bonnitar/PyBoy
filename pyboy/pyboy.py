@@ -13,7 +13,8 @@ import time
 from pyboy.openai_gym import PyBoyGymEnv
 from pyboy.openai_gym import enabled as gym_enabled
 from pyboy.plugins.manager import PluginManager
-from pyboy.utils import IntIOWrapper, WindowEvent
+from pyboy.utils import IntIOWrapper, WindowEvent, GameShark
+
 
 from . import botsupport
 from .core.mb import Motherboard
@@ -108,6 +109,12 @@ class PyBoy:
         self.quitting = False
         self.stopped = False
         self.window_title = "PyBoy"
+
+
+        self.cheats_enabled = False
+        self.gameshark = None
+        self.cheats_path = ''
+
 
         ###################
         # Plugins
@@ -509,3 +516,53 @@ class PyBoy:
 
     def _is_cpu_stuck(self):
         return self.mb.cpu.is_stuck
+
+
+
+    ####################
+      # Cheat Codes #
+    def set_cheats_path(self, cheats_path: str):
+        '''
+        Sets the path to the .txt file containing the cheat codes.
+        The cheats_path should
+        point to a saved .txt file containing the codes with one code per line formatted with a name for the code and the code itself seperated by a space:
+        {code_name} {code}
+
+        Ex. 
+        NoWildEncounters 01033CD1
+        InfiniteMoney 019947D3
+        '''
+        self.cheats_enabled = True
+        self.cheats_path = cheats_path
+        self.gameshark = GameShark()
+        if self.cheats_path != None:
+            self.gameshark.set_path(self.cheats_path)
+        else:
+            print('Error: Cheat code path not set!')
+
+    def run_cheats(self):
+        '''
+        Run this function on Tick to have the codes run in-game, as well as allowing
+        for the change of cheats at runtime by modifying the {cheat_path.txt} file. 
+        Ensure to save the {cheat_path.txt} file after modifications.
+        '''
+        if self.gameshark != None:
+            if self.cheats_enabled:
+                self.gameshark._update_codes()
+                for key in self.gameshark.cheats.keys():
+                    if key in self.gameshark.cheats:
+                        cheat = self.gameshark.cheats[key]
+                        address = cheat['address']
+                        value = cheat['value']
+                        # print(f'cheat_address= {address}, cheat_value= {value}')
+                        self.set_memory_value(address, value)
+                    else:
+                        print(f"Cheat '{key}' not found in the cheats database.")
+        else:
+            print('Error: Need to run pyboy.set_cheats_path(cheat_path) to set the path of the cheat codes file.')
+
+    def toggle_cheats(self, active: bool):
+        '''
+        Allows for toggling the use of codes 
+        '''
+        self.cheats_enabled = active

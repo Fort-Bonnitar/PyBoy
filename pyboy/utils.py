@@ -273,3 +273,79 @@ class WindowEventMouse(WindowEvent):
         self.mouse_scroll_x = mouse_scroll_x
         self.mouse_scroll_y = mouse_scroll_y
         self.mouse_button = mouse_button
+
+
+
+# Gameshark Cheat Codes
+class GameShark:
+    def __init__(self):
+        '''
+        This class allows for the conversion and usage of Gameshark codes. The cheats_path should
+        point to a saved .txt file containing the codes with the following format a name for the code and the code itself seperated by a space:
+        {code_name} {code}
+
+        Ex. 
+        NoWildEncounters 01033CD1
+        '''
+
+        self.cheats_path = None
+        self.cheats = {}
+        self._update_codes()
+
+    def set_path(self, path):
+        self.cheats_path = path
+        self._update_codes()
+
+
+    def _get_cheats(self):
+        with open(self.cheats_path, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) == 2:
+                    cheat_name, gameshark_code = parts[0], parts[1]
+                    self._convert_cheat(cheat_name, gameshark_code)
+                else:
+                    print(f"Invalid line in cheats file: {line}")
+
+
+
+    def _convert_cheat(self, cheat_name: str, gameshark_code: str):
+        '''
+        A GameShark code for these consoles is written in the format ttvvaaaa. tt specifies the code type and VRAM bank, which is usually 01. vv specifies the hexadecimal value the code will write into the game's memory. aaaa specifies the memory address that will be modified, with the low byte first (e.g. address C056 is written as 56C0).
+        Example 011556C0 would output:
+        location = 01
+        value = 0x15
+        address = 0x56C0
+        '''
+        # Check if the input cheat code has the correct length (8 characters)
+        if len(gameshark_code) != 8:
+            raise ValueError("Invalid cheat code length. Cheat code must be 8 characters long.")
+
+        # Extract components from the cheat code
+        code_type = gameshark_code[:2]
+        value = int((f'0x{gameshark_code[2:4]}'), 16)  # Convert hexadecimal value to an integer
+        print(f'converted value = 0x{gameshark_code[2:4]}')
+        unconverted_address = gameshark_code[4:]  # Ex:   1ED1
+        lower = unconverted_address[:2]  # Ex:  1E
+        upper = unconverted_address[2:]  # Ex:  D1
+        address_converted = '0x' + upper + lower   # Ex: 0xD11E   # Converting to Ram Readable address 
+        print(f'converted address = {address_converted}')
+        address = int(address_converted, 16)
+
+        # Format the output
+        formatted_output = {
+            'location': code_type,
+            'value': value,
+            'address': address
+        }
+        self.cheats[cheat_name] = formatted_output
+
+
+
+    def _update_codes(self):
+        self.cheats = {}
+        self._get_cheats()
+
+
+
